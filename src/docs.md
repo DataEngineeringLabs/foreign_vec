@@ -1,3 +1,32 @@
+This library offers [`ForeignVec`], a zero-cost abstraction to store either [`Vec<T>`]
+or an immutable region aligned with `T` allocated by an external allocator.
+
+The primary use-case of this library is when you have an in-memory representation
+in both Rust and other languages and you have a specification to share
+(immutable) vectors across language boundaries at zero cost, via FFI.
+
+In this scenario, you may want to still offer all the benefits of Rust's `Vec`
+when it comes to mutable access, while providing a read-only access when the
+data came from a foreign interface. In other words, given
+
+* an in-memory format
+* an FFI specification to share immutable memory regions at zero cost at language
+  boundaries
+
+then, [`ForeignVec`] offers an interface to
+
+* allow zero-cost immutable access via `core::ops::Deref<T>` to `Vec<T>` or
+  the foreign vector
+* allow access to `&mut Vec<T>` when it is allocated by Rust
+
+The crucial point here is "zero-cost immutable access". The usual idiom
+here is to have an `enum` with two variants, `Native(Vec<T>)` and another.
+However, such enum incurs a significant (`+50%`) cost when deferring the enum
+into `&[T]`.
+
+The complete test:
+
+```rust
 use foreign_vec::ForeignVec;
 
 // say that we have a foreign struct allocated by an external allocator (e.g. C++)
@@ -76,3 +105,5 @@ fn test_foreign() {
     // this calls `Foreign::drop`, which calls the foreign function
     drop(vec);
 }
+
+```

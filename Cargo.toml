@@ -2,5 +2,10 @@
 name = "foreign_vec"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Unofficial implementation of Apache Arrow spec in safe Rust"
+homepage = "https://github.com/DataEngineeringLabs/foreign_vec"
+repository = "https://github.com/DataEngineeringLabs/foreign_vec"
+authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>"]
 
 [dependencies]

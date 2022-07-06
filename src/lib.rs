@@ -1,16 +1,4 @@
-//! This library offers [`ForeignVec`], a zero-cost abstraction to store either [`Vec`]
-//! or an immutable region allocated by an external allocator.
-//!
-//! The primary use-case of this library is when you have an in-memory format
-//! that has the same in-memory representation in both Rust and other languages
-//! and you have a specification to share this across language boundaries at zero cost,
-//! via FFI.
-//!
-//! The typical approach is via bindgen and some semantics on how memory is released.
-//!
-//! [`ForeignVec`] is exposes a small struct that
-//! behaves either as a `Vec` (allocated by Rust), or as `(ptr, len, owner)` allocated by
-//! the external allocator, via a zero-cost implementation of [`core::ops::Deref<T>`].
+#![doc = include_str!("docs.md")]
 #![deny(missing_docs)]
 #![no_std]
 
@@ -43,24 +31,22 @@ pub struct ForeignVec<D, T> {
 }
 
 impl<D, T> ForeignVec<D, T> {
-    /// Takes ownership of an allocated memory region `[ptr, ptr+len[`,
-    /// # Panic
-    /// This function panics if `ptr` is null
+    /// Takes ownership of an allocated memory region.
+    /// # Panics
+    /// This function panics if and only if pointer is not null
     /// # Safety
-    /// This function is safe iff:
-    /// * the region is properly allocated in that a slice can be safely built from it.
-    /// * the region is immutable.
+    /// This function is safe if and only if `ptr` is valid for `length`
     /// # Implementation
-    /// This function leaks iff `owner` does not deallocate the region when dropped.
+    /// This function leaks if and only if `owner` does not deallocate
+    /// the region `[ptr, ptr+length[` when dropped.
     #[inline]
-    pub unsafe fn from_owned(ptr: *const T, len: usize, owner: D) -> Self {
+    pub unsafe fn from_foreign(ptr: *const T, length: usize, owner: D) -> Self {
         assert!(!ptr.is_null());
-
         // This line is technically outside the assumptions of `Vec::from_raw_parts`, since
         // `ptr` was not allocated by `Vec`. However, one of the invariants of this struct
         // is that we do never expose this region as a `Vec`; we only use `Vec` on it to provide
         // immutable access to the region (via `Vec::deref` to `&[T]`).
-        let data = Vec::from_raw_parts(ptr as *mut T, len, len);
+        let data = Vec::from_raw_parts(ptr as *mut T, length, length);
         let data = ManuallyDrop::new(data);
 
         Self {
@@ -103,7 +89,7 @@ impl<D, T> core::ops::Deref for ForeignVec<D, T> {
     }
 }
 
-impl<T: core::fmt::Debug, D> core::fmt::Debug for ForeignVec<D, T> {
+impl<D, T: core::fmt::Debug> core::fmt::Debug for ForeignVec<D, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&**self, f)
     }
